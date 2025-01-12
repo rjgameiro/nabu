@@ -74,6 +74,7 @@
     state: 'absent'
   when: 'item.path | basename not in allowed_conf_include_api'
   loop: "{{ api_conf_files.files }}"
+  become: true
 
 - name: 'extract all existing rust packages from the "name" key to a list of systemd file names'
   set_fact:
@@ -92,4 +93,5 @@
     state: 'absent'
   when: 'item.path | basename not in allowed_systemd_start'
   loop: "{{ systemd_files.files }}"
+  become: true
 

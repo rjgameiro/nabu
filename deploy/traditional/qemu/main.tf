@@ -78,7 +78,7 @@ resource "shell_script" "vm_name_to_local_ip" {
   }
 
   environment = {
-    entry       = shell_script.vm[count.index].output.name
+    entry       = format("f${count.index}.%s.qemu.%s", terraform.workspace, var.project)
     prefix      = "127.0.0.1"
     file        = "/etc/hosts"
     become_root = "yes"
@@ -97,7 +97,7 @@ resource "shell_script" "ssh_config_entry" {
   }
 
   environment = {
-    ssh_fqdn = shell_script.vm[count.index].output.name
+    ssh_fqdn = format("f${count.index}.%s.qemu.%s", terraform.workspace, var.project)
     ssh_port = 2022 + count.index
   }
 

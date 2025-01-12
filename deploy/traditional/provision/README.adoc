@@ -2,8 +2,8 @@
 
 [source, shell]
 ----
-ansible-playbook public-deploy.yml \
-  -i f0.local.${PROJECT}, \
+[ -n "${PROJECT}" ] && ansible-playbook public-deploy.yml \
+  -i f0.local.qemu.${PROJECT}, \
   --user deployer \
   --extra-vars="project=${PROJECT}" \
   --extra-vars="domain=bungeebug.com" \
@@ -18,7 +18,7 @@ ansible-playbook public-deploy.yml \
   --user deployer \
   --extra-vars="project=${PROJECT}" \
   --extra-vars="domain=bungeebug.com" \
-  --extra-vars="target=azure" \
+  --extra-vars="target=aws" \
   --extra-vars="upgrade=true" \
   --extra-vars="workspace=stage" \
   --extra-vars="profile=debug" \
@@ -35,7 +35,7 @@ ansible-playbook public-deploy.yml \
   --extra-vars="profile=debug" \
   --extra-vars="normalized_name=f0.sandbox.${PROJECT}"
 
-ansible-playbook public-deploy.yml \
+[ -n "${PROJECT}" ] && ansible-playbook public-deploy.yml \
   -i f0.sandbox.${PROJECT}.bungeebug.com, \
   --user deployer \
   --extra-vars="project=${PROJECT}" \

@@ -9,9 +9,12 @@ config:
   develop:
     bind_start_port: 3200
     log_level: 'debug'
-  stage:
+  test:
     bind_start_port: 3400
+    log_level: 'debug'
+  stage:
+    bind_start_port: 3600
     log_level: 'info'
   release:
-    bind_start_port: 3600
+    bind_start_port: 3800
     log_level: 'info'
