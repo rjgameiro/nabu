@@ -18,7 +18,7 @@ The following environment variables can be set to customize the deployment:
 
 `OWNER` (required) - the email address of the project owner (will be used for tagging the resources).
 
-`BACKEND_AWS_PRINCIPAL` (required) - the AWS IAM Principal ARN (user or role) that will be configured in the assume role configuration for the Terraform S3 state backend.
+`STATE_AWS_PRINCIPAL` (required) - the AWS IAM Principal ARN (user or role) that will be configured in the assume role configuration for the Terraform S3 state backend.
 
 `AWS_REGION` (optional) - the AWS region for deployment of the Terraform S3 state backend. Alternatively, you can set the default region in the AWS CLI (`aws configure`).
 
