@@ -75,7 +75,7 @@ The following environment variables can be set to customize the deployment:
 
 == 1Password local variable setting: source local.sh
 
-The `local.sh` script sets up the environment for the Terraform deployment by configuring necessary variables and fetching secure secrets from 1Password. It first searches parent directories for a `base.sh` file, which must define the `PROJECT` and `DOMAIN` environment variables. Using 1Password CLI (`op`), it retrieves secrets like Azure credentials, Linode tokens, and backend configurations, exporting them as the required environment variables.
+The `local.sh` script sets up the environment for the Terraform deployment by configuring necessary variables and fetching secure secrets from 1Password. It first searches parent directories for a `config/load.sh` file, which must define the `PROJECT` and `DOMAIN` environment variables. Using 1Password CLI (`op`), it retrieves secrets like Azure credentials, Linode tokens, and backend configurations, exporting them as the required environment variables.
 
 == Deploy/Delete
 
