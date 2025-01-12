@@ -1,9 +1,4 @@
 = nabu
 
 nabu mgiht become a multiplayer engine for trick taking card games.
-For now... not much more than an IaC template to deploy a web server, a couple of Rust APIs, a Rust Daemon, to a VM that can be hosted on:
-
-- AWS
-- Azure
-- Digital Ocean
-- QEMU (locally)
+For now... not much more than an IaC template to deploy a web server, a couple of Rust APIs, a Rust Daemon, to a VM that can be hosted on: AWS, Azure, Digital Ocean and QEMU (locally).
