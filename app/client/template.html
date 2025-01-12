@@ -51,7 +51,7 @@
 </head>
 <body>
 <div class="container">
-    <input type="text" id="text" placeholder="Enter some text...">
+    <label for="text"></label><input type="text" id="text" placeholder="Enter some text...">
     <button onclick="service('/api/v1/api1/lower', ':8001')">LOWER</button>
     <button onclick="service('/api/v1/api2/upper', ':8002')">UPPER</button>
     <div id="response">
@@ -61,8 +61,8 @@
 
 <script>
     async function service(endpoint, port = "") {
-        var host = window.location.hostname;
-        var prefix = host === 'localhost' ? 'http://localhost' + port : '';
+        const host = window.location.hostname;
+        const prefix = host === 'localhost' ? 'http://localhost' + port : '';
         const text = document.getElementById('text').value;
         const url = text ? `${prefix}${endpoint}?text=${encodeURIComponent(text)}` : endpoint;
         try {

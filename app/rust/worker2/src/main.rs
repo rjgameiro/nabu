@@ -45,11 +45,11 @@ async fn main() {
     });
 
     // Main task: Log message every 60 seconds
-    let mut interval = time::interval(Duration::from_secs(30));
+    let mut interval = time::interval(Duration::from_secs(5));
 
     while !shutdown_flag.load(Ordering::Relaxed) {
         interval.tick().await;
-        info!("alive and kicking");
+        // info!("alive and kicking");
     }
 
     info!("shutdown");

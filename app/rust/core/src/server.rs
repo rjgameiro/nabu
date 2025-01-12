@@ -127,7 +127,7 @@ pub async fn serve(app: Router) {
         .map(|listener| {
             let local_addr = listener.local_addr().unwrap();
             let app = app.clone(); // Clone the app for each server
-            let shutdown_notify = Arc::clone(&shutdown_notify); // Clone the Arc for each server
+            let shutdown_notify = Arc::clone(&shutdown_notify); // Clone the shutdown notifier for each server
 
             tokio::spawn(async move {
                 info!("serving on {}", local_addr);

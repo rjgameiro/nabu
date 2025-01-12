@@ -5,21 +5,17 @@
   api_prefixes:
     - "/api/v1/api1"
   uses: []
-#    - "redis"
 
 - name: "api2"
   start_on_boot: true
   api_prefixes:
     - "/api/v1/api2"
   uses: []
-#    - "postgres"
 
 - name: "worker1"
   start_on_boot: true
   uses: []
-#    - "redis"
 
 - name: "worker2"
   start_on_boot: true
   uses: []
-#    - "postgres"

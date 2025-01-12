@@ -11,14 +11,16 @@ use axum::http::StatusCode;
 use axum::Router;
 use axum::routing::get;
 use axum::Json;
-
+use tracing::level_filters::LevelFilter;
+use core::server::serve;
+use core::server::running_in_terminal;
 use core::TextQuery;
 use core::MessageResponse;
 
 const API_PREFIX: &str = "/api/v1/api2";
 
 async fn upper_handler(Query(query): Query<TextQuery>) -> impl IntoResponse {
-    // Check if the `text` parameter is provided
+    // Check if the `text` parameter was provided
     let response = match query.text.as_deref() {
         None | Some("") => Json(MessageResponse { result: None, error: Some("No text was provided.".into()) }),
         Some(text) => Json(MessageResponse { result: Some(text.to_uppercase()), error: None }),
@@ -31,17 +33,20 @@ async fn upper_handler(Query(query): Query<TextQuery>) -> impl IntoResponse {
 #[tokio::main]
 async fn main() {
 
-    if core::server::running_in_terminal() {
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env_lossy();
+    if running_in_terminal() {
         tracing_subscriber::fmt::fmt()
             .compact()
-            .without_time() // Remove timestamp
-            .with_target(false) // Remove the binary name
-            .with_env_filter(EnvFilter::from_default_env())// Remove the binary name
+            .without_time()
+            .with_target(false)
+            .with_env_filter(env_filter)
             .init();
     } else {
         tracing_subscriber::fmt()
             .with_ansi(false)
-            .with_env_filter(EnvFilter::from_default_env())
+            .with_env_filter(env_filter)
             .init();
     }
 
@@ -57,7 +62,7 @@ async fn main() {
         .route(&format!("{}/{}", API_PREFIX, "upper"), get(upper_handler))
         .layer(cors);
 
-    core::server::serve(app).await;
+    serve(app).await;
 
     info!("shutdown.");
 }
