@@ -14,12 +14,12 @@
   uses: []
 #    - "postgres"
 
-#- name: "worker1"
-#  start_on_boot: true
-#  uses: []
+- name: "worker1"
+  start_on_boot: true
+  uses: []
 #    - "redis"
 
-#- name: "worker2"
-#  start_on_boot: true
-#  uses: []
+- name: "worker2"
+  start_on_boot: true
+  uses: []
 #    - "postgres"
