@@ -1,0 +1,42 @@
+[Unit]
+
+Description={{ app_descriptor }} {{package.name }} service
+After=network.target
+
+[Service]
+
+User={{ package_user }}
+Group={{ package_group }}
+
+WorkingDirectory={{ package_install_path }}
+ExecStart={{ package_install_path }}/{{ app_worker_bin }}/{{ package.name }}
+
+Environment="BIND_ADDRESSES=127.0.0.1"
+Environment="BIND_PORT={{ bind_port }}"
+Environment="RUST_LOG={{ log_level }}"
+
+{% if 'redis' in package.uses %}
+Environment="REDIS_URL=redis://127.0.0.1:{{ (config[workspace].bind_start_port | default(3000) | int) + (config.general.service_port_delta | default(10) | int) + (app_services.index('redis') | int) }}"
+
+{% endif %}
+{% if 'postgres' in package.uses %}
+Environment="PGHOST=127.0.0.1"
+Environment="PGPORT={{ (config[workspace].bind_start_port | default(3000) | int) + (config.general.service_port_delta | default(10) | int) + (app_services.index('postgres') | int) }}"
+Environment="PGDATABASE={{ app_descriptor }}"
+Environment="PGUSER={{ app_descriptor }}"
+Environment="PGPASSWORD={{ lookup("community.general.onepassword", "{{ project }} service passwords", section="postgres", field=workspace, vault="Development") }}"
+
+{% endif %}
+StandardOutput=append:{{ package_install_path }}/{{ app_worker_logs }}/{{ package.name }}.log
+StandardError=append:{{ package_install_path }}/{{ app_worker_logs }}/{{ package.name }}-error.log
+
+Restart=on-failure
+RestartSec=10
+
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+[Install]
+
+# start on boot
+WantedBy=multi-user.target

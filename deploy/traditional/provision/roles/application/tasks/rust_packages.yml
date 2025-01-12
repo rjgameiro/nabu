@@ -1,0 +1,95 @@
+---
+
+- name: 'ensure required directories exist'
+  ansible.builtin.file:
+    state: 'directory'
+    path: '{{ item.path }}'
+  with_items:
+    - { path: '{{ app_rust_build_path }}' }
+
+- name: 'push rust source code into host for building'
+  ansible.posix.synchronize:
+    mode: push
+    src: '{{ app_path }}/rust/'
+    dest: '{{ app_rust_build_path }}'
+    verify_host: false
+    recursive: true
+    partial: true
+    owner: false
+    group: false
+    perms: false
+    times: false
+    delete: true
+    archive: false
+    checksum: true
+    rsync_opts:
+      - "--exclude=target --exclude=.DSStore"
+
+- name: 'set the path to the yaml rust apis file'
+  set_fact:
+    rust_packages_yml: '{{ app_path }}/rust/packages.yml'
+
+- name: 'load and parse the rust packages file'
+  set_fact:
+    rust_packages: "{{ lookup('file', rust_packages_yml) | from_yaml }}"
+
+- name: 'debug rust_packages'
+  debug:
+    var: rust_packages
+
+- name: 'check if all items either have or lack the user_suffix and group_suffix key'
+  assert:
+    that:
+      - rust_packages | map(attribute='user_suffix') | list | select('defined') | length == 0 or
+        rust_packages | map(attribute='user_suffix') | list | select('defined') | length == rust_packages | length
+      - rust_packages | map(attribute='group_suffix') | list | select('defined') | length == 0 or
+        rust_packages | map(attribute='group_suffix') | list | select('defined') | length == rust_packages | length
+    fail_msg:  'not all rust_api.yml elements consistently have or lack the "user_suffix" or "group_suffix" key'
+    success_msg: 'all rust_api.yml elements consistently have or lack the "user_suffix" or "group_suffix" key'
+
+- name: 'iterate all rust packages'
+  include_tasks: "{{ role_path }}/tasks/rust_package.yml"
+  loop: '{{ rust_packages }}'
+  loop_control:
+    loop_var: 'package'
+    index_var: 'package_index'
+  vars:
+    bind_port: '{{ (config[workspace].bind_start_port | default(3000) | int) + (config.general.rust_port_delta | default(100) | int) + package_index * (config.general.rust_port_step | default(5) | int) }}'
+    log_level: '{{ config[workspace].log_level | default("info") }}'
+
+- name: 'extract all existing rust packages from the "name" key to a list of nginx conf file names (if api_prefixes is defined)'
+  set_fact:
+    allowed_conf_include_api: "{{ rust_packages | selectattr('api_prefixes', 'defined') | map(attribute='name') | map('regex_replace', '^(.*)$', '\\1.api_conf') | list }}"
+
+- name: 'find all the nginx api conf files in the target directory'
+  find:
+    paths: "{{ app_site_root_path }}/{{ app_site_include }}"
+    patterns: "*.api_conf"
+    file_type: 'file'
+  register: 'api_conf_files'
+
+- name: 'remove files not in the existing rust apis list'
+  file:
+    path: "{{ item.path }}"
+    state: 'absent'
+  when: 'item.path | basename not in allowed_conf_include_api'
+  loop: "{{ api_conf_files.files }}"
+
+- name: 'extract all existing rust packages from the "name" key to a list of systemd file names'
+  set_fact:
+    allowed_systemd_start: "{{ rust_packages | selectattr('start_on_boot', 'equalto', true) | map(attribute='name') | map('regex_replace', '^(.*)$', app_descriptor ~ '.\\1.service') | list }}"
+
+- name: 'find all the systemd files'
+  find:
+    paths: "{{ app_site_root_path }}/{{ app_site_include }}"
+    patterns: "/etc/systemd/system/{{ app_descriptor }}.*.service"
+    file_type: 'link'
+  register: 'systemd_files'
+
+- name: 'remove files not in the existing rust systemd_files list'
+  file:
+    path: "{{ item.path }}"
+    state: 'absent'
+  when: 'item.path | basename not in allowed_systemd_start'
+  loop: "{{ systemd_files.files }}"
+

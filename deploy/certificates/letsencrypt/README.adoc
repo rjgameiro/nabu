@@ -1,0 +1,63 @@
+= Terraform Deployment: Let's Encrypt Certificates
+
+This Terraform module creates Let's Encrypt certificates for specified domains. These certificates can be used to secure applications behind an SSL frontend. The module uses the DNS challenge to validate domain ownership and stores the certificates in 1Password in the [.monospaced]#'Development'# vault under the item named [.monospaced]#'[PROJECT] [WORKSPACE] SSL Certificate'#.
+
+== Environment
+
+The following environment variables are required to support Terraform initialization and deploy/destroy operations.
+
+=== General
+
+The following environment variables can be set to customize the deployment:
+
+`PROJECT` (required) - the project name in snake case (will be used for naming and tagging the resources).
+
+`OWNER` (required) - the email address of the project owner (will be used for tagging the resources, and for the owner of the LetsEncrypt ACME registration).
+
+`AWS_ACCESS_KEY_ID` (required) - AWS access key ID for authentication (for the Terraform backend).
+
+`AWS_SECRET_ACCESS_KEY` (required) - AWS secret access key for authentication.
+
+`LINODE_TOKEN` (required) - Linode API token for DNS operations (used for dns challenge with LetsEncrypt).
+
+`STATE_ROLE_ARN` (required) - Role ARN for Terraform state backend access.
+
+`AWS_REGION` (required) - AWS region for the Terraform backend.
+
+Additionally, you can set the environment variables for AWS CLI defined https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html[here], specially interesting may be `AWS_PROFILE`.
+
+=== Terraform
+
+`TF_VAR_project` (required) - derived from `PROJECT`.
+
+`TF_VAR_domain` (required) - derived from `DOMAIN`.
+
+`TF_VAR_owner` (required) - derived from owner `OWNER`.
+
+`TF_VAR_dns_provider` (required) - DNS provider (set to "linode").
+
+== 1Password local variable setting: source local.sh
+
+The `local.sh` script sets up the environment for the Terraform deployment by configuring necessary variables and fetching secure secrets from 1Password. It first searches parent directories for a `base.sh` file, which must define the `PROJECT` and `DOMAIN` environment variables. Using 1Password CLI (`op`), it retrieves secrets like AWS credentials, Linode tokens, and backend configurations, exporting them as the required environment variables.
+
+== Initializing Terraform
+
+Run the following command to initialize Terraform with backend configuration:
+
+[source,shell]
+----
+tofu init \
+  -backend-config="assume_role={role_arn=\"${STATE_ROLE_ARN}\"}" \
+  -backend-config="key=${PROJECT}-letsencrypt.tfstate" \
+  -backend-config="bucket=${PROJECT}-terraform-state" \
+  -backend-config="dynamodb_table=${PROJECT}-terraform-state-lock"
+----
+
+== Deploying Certificates
+
+The module automates DNS challenge validation using the Linode API. Ensure you have a Linode token with permissions to update DNS records.
+
+[source,shell]
+----
+terraform apply
+----

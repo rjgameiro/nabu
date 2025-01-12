@@ -1,0 +1,13 @@
+---
+
+default_ssl_requests_directory: '/etc/ssl/requests'
+default_ssl_private_directory: '/etc/ssl/private'
+default_ssl_certs_directory: '/etc/ssl/certs'
+
+default_self_signed_ssl_csr: '{{ default_ssl_requests_directory }}/default.csr.pem'
+default_self_signed_ssl_key: '{{ default_ssl_private_directory }}/default.key.pem'
+default_self_signed_ssl_cert: '{{ default_ssl_certs_directory }}/default.cert.pem'
+
+nginx_config_directory: '/etc/nginx'
+
+default_document_root: '/srv/default/site/public'

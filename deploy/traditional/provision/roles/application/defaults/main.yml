@@ -1,0 +1,7 @@
+---
+
+app_group: '{{ app_descriptor }}'
+app_user: '{{ app_descriptor }}'
+
+generic_worker_user_suffix: 'worker'
+generic_worker_group_suffix: 'worker'

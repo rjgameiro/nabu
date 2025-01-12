@@ -1,0 +1,87 @@
+= Azure Blob Storage Backend Deployment
+
+== Overview
+This guide provides the steps to create and delete an Azure Bicep Deployment that includes the necessary resources for a Terraform Blob Storage backend. All the required resources will be created in a new resource group.
+
+== Prerequisites
+
+=== Log in to Azure
+
+Log in to your Azure account by running:
+
+[source, shell]
+----
+az login
+----
+
+=== Create an App Registration (once)
+
+If you do not have an App Registration already set up, create one in Azure Active Directory (Azure AD). This will establish a Service Principal for role-based access control (RBAC), enabling Terraform to authenticate and manage resources programmatically.
+
+Run the following command (replacing MyProject with your project name):
+
+[source, shell]
+----
+az ad sp create-for-rbac \
+  --name MyProjectTerraform
+
+{
+  "appId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "displayName": "MyProjectTerraform",
+  "password": "HIDDEN",
+  "tenant": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+}
+----
+*Note:* save the *password* attribute securely as it will be needed later.
+
+You will need additional information about the Principal (specifically the *Principal ID* to use when referring to it):
+
+[source, shell]
+----
+az ad sp show \
+  --id aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa \
+  --query "{id: id}"
+
+{
+  "id":    "cccccccc-cccc-cccc-cccc-cccccccccccc"
+}
+----
+
+You will also need the Key ID for the password created earlier:
+
+[source, shell]
+----
+az ad app credential list \
+  --id aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa \
+  --query "[].{hint: hint, keyId: keyId}"
+
+[{
+    "hint": "HID",
+    "keyId": "dddddddd-dddd-dddd-dddd-dddddddddddd"
+}]
+----
+
+== Environment Variables
+
+The following environment variables can be set to customize the deployment:
+
+`PROJECT` (required) - the project name in snake case (will be used for naming and tagging the resources).
+
+`OWNER` (required) - the email address of the project owner (will be used for tagging the resources).
+
+`STATE_AZURE_PRINCIPAL` (required) - the Principal ID (created earlier) for Terraform.
+
+`AZURE_LOCATION` (optional) - the Azure location for deployment of the Terraform S3 backend. Alternatively you can set the default region in the Azure CLI ([.monospaced]#az config set defaults.location='region'#).
+
+== 1Password local variable setting: source local.sh
+
+The `local.sh` script sets up the environment for the Terraform deployment by configuring necessary variables and fetching secure secrets from 1Password. It first searches parent directories for a `base.sh` file, which must define the `PROJECT` and `DOMAIN` environment variables. Using 1Password CLI (`op`), it retrieves secrets like Azure credentials, Linode tokens, and backend configurations, exporting them as the required environment variables.
+
+== Deploy/Delete
+
+To deploy or delete the CloudFormation stack, run the deployment script with the desired command:
+
+[code, shell]
+----
+./state.sh deploy|delete
+----

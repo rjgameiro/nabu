@@ -1,0 +1,38 @@
+= AWS S3 Backend Deployment
+
+== Overview
+This guide provides the steps to deploy and delete an AWS CloudFormation stack that includes the necessary resources for a Terraform S3 backend. It also includes the creation of a resource group to organize resources created by the stack executions.
+
+== Prerequisites
+Ensure the following:
+
+- AWS CLI is installed and configured (`aws configure`) on your system.
+- If 1Password CLI is installed, the script will use the `op` aws plugin to authenticate.
+- You have the required permissions to create resources using the selected profile.
+
+== Environment Variables
+
+The following environment variables can be set to customize the deployment:
+
+`PROJECT` (required) - the project name in snake case (will be used for naming and tagging the resources).
+
+`OWNER` (required) - the email address of the project owner (will be used for tagging the resources).
+
+`BACKEND_AWS_PRINCIPAL` (required) - the AWS IAM Principal ARN (user or role) that will be configured in the assume role configuration for the Terraform S3 state backend.
+
+`AWS_REGION` (optional) - the AWS region for deployment of the Terraform S3 state backend. Alternatively, you can set the default region in the AWS CLI (`aws configure`).
+
+Additionally, you can set the environment variables for AWS CLI defined https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html[here], specially interesting may be `AWS_PROFILE`.
+
+== 1Password local variable setting: source local.sh
+
+The `local.sh` script sets up the environment for the Terraform deployment by configuring necessary variables and fetching secure secrets from 1Password. It first searches parent directories for a `base.sh` file, which must define the `PROJECT` and `DOMAIN` environment variables. Using 1Password CLI (`op`), it retrieves secrets like AWS credentials, Linode tokens, and state backend configurations, exporting them as the required environment variables.
+
+== Deploy/Delete
+
+To deploy or delete the Bicep template, run the deployment script with the desired command:
+
+[code, shell]
+----
+./state.sh deploy|delete
+----

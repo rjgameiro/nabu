@@ -1,0 +1,184 @@
+= QEMU
+
+
+[code,sh]
+----
+
+find /dev/disk* -maxdepth 1 -user ${USER} | egrep "/dev/disk[0-9]+$" | xargs -n1 hdiutil detach
+
+
+cd /Users/rgameiro/Temporary/QEMU
+
+debian-12.8.0-arm64-netinst.iso
+
+ansible-playbook ../provisioner/frontend.yml --user debian -i local.mensura.bungeebug.com, --extra-vars="latest_packages=true" --extra-vars="workspace=local" --extra-vars="target=qemu"
+
+rsync -av ~/Developer/Mixed/mensura --exclude .terraform --exclude .git --exclude target debian@192.168.1.6:
+
+curl -fsSL test.docker.com -o get-docker.sh && sh get-docker.sh
+
+git clone https://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@github.com/rjgameiro/mensura.git
+
+PACKAGES
+    #   - podman
+    #   - containers-storage
+
+podman build -t mensura-api .
+podman run -p 8000:800 --rm --name mensura-1 mensura-api
+podman run -dp 8000:800 --rm --name mensura-1 mensura-api
+
+podman container prune -f
+podman image prune -a -f
+podman volume prune -f
+podman network prune -f
+podman system prune -a --volumes -f
+podman image rm -a -f
+podman system reset -f
+
+podman builder prune
+
+# NOTES
+
+# -netdev vmnet-bridged,id=net0,ifname=en0 \
+# -device virtio-net-device,netdev=net0 \
+
+# -serial unix:/tmp/vm-console.sock,server=on,wait=off \
+# -monitor unix:/tmp/qemu-monitor.sock,server=on,wait=off \
+# -nographic
+
+# socat -,raw,echo=0,escape=0x1C unix:/tmp/vm-console.sock
+
+# -serial tcp:localhost:4444,server,nowait \
+# -monitor tcp:localhost:5555,server,nowait \
+# -nographic
+
+# socat -,raw,echo=0,escape=0x1C tcp:127.0.0.1:4444
+
+
+# INSTALL
+
+qemu-img create -f raw uefi-drive-debian-12.raw 64M
+qemu-img create -f raw boot-drive-debian-12.raw 8G
+
+qemu-system-aarch64 \
+-accel hvf \
+-m 2048 \
+-cpu cortex-a57 -M virt,highmem=off  \
+-rtc base=localtime,clock=host \
+-device virtio-serial \
+-device virtserialport,chardev=qga0,name=org.qemu.guest_agent.0 \
+-chardev socket,id=qga0,path=/tmp/qga.sock,server=on,wait=off \
+-drive file=/opt/homebrew/share/qemu/edk2-aarch64-code.fd,if=pflash,format=raw,readonly=on \
+-drive file=uefi-drive-debian-12.raw,if=pflash,format=raw \
+-drive file=boot-drive-debian-12.raw,if=none,format=raw,id=hd0 \
+-device virtio-blk-device,drive=hd0,serial="dummyserial" \
+-cdrom debian-12.8.0-arm64-netinst.iso \
+-rtc base=localtime,clock=host \
+-netdev user,id=net0,hostfwd=tcp::2022-:22,hostfwd=tcp::2080-:80,hostfwd=tcp::2443-:443 \
+-device virtio-net-pci,netdev=net0 \
+-serial unix:/tmp/vm-console.sock,server=on,wait=off \
+-monitor stdio -nographic
+
+# CTRL+\
+socat -,raw,echo=0,escape=0x1C unix:/tmp/vm-console.sock
+
+# RUN AS ROOT
+apt-get install sudo python3
+# PAUSE
+echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN/rDGHd9XKl0IWjVlSR+WxfI0NpWOMsb8kETQxx/5Sp" >> /root/.ssh/authorized_keys
+chmod 600 /root/.ssh/authorized_keys
+groupadd --gid 2001 deployer
+useradd --uid 2001 --gid 2001 --home-dir /home/deployer --create-home --shell /bin/bash --comment "project deployer" --password \! deployer
+chmod 700 /home/deployer
+echo "deployer ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/10-deployer
+mkdir -p /home/deployer/.ssh
+chmod 700 /home/deployer/.ssh
+echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN/rDGHd9XKl0IWjVlSR+WxfI0NpWOMsb8kETQxx/5Sp" >> /home/deployer/.ssh/authorized_keys
+chmod 600 /home/deployer/.ssh/authorized_keys
+chown -R deployer:deployer /home/deployer/.ssh
+
+# USE
+
+cd /Users/rgameiro/Temporary/QEMU
+
+export ram_uefi_disk=$(hdiutil attach -nomount ram://131072)
+export ram_uefi_disk=$(printf "${ram_uefi_disk}" | sed -r 's/(\/dev\/disk[0-9]{1,2}).*/\1/g')
+echo ${ram_uefi_disk}
+
+export ram_boot_disk=$(hdiutil attach -nomount ram://16777216)
+export ram_boot_disk=$(printf "${ram_boot_disk}" | sed -r 's/(\/dev\/disk[0-9]{1,2}).*/\1/g')
+echo ${ram_boot_disk}
+
+find /dev/disk* -maxdepth 1 -user $USER | grep -E "^/dev/disk[0-9]+$" | xargs -n1 hdiutil detach
+
+dd if=uefi-drive-debian-12.raw of=${ram_uefi_disk} bs=128k
+dd if=boot-drive-debian-12.raw of=${ram_boot_disk} bs=128k
+
+qemu-system-aarch64 \
+-accel hvf \
+-m 2048 \
+-M virt,highmem=off \
+-smp cpus=2 \
+-cpu cortex-a57 \
+-rtc base=localtime,clock=host \
+-device virtio-serial \
+-device virtserialport,chardev=qga0,name=org.qemu.guest_agent.0 \
+-chardev socket,id=qga0,path=/tmp/qga.sock,server=on,wait=off \
+-drive file=/opt/homebrew/share/qemu/edk2-aarch64-code.fd,if=pflash,format=raw,readonly=on \
+-drive file=${ram_uefi_disk},if=pflash,format=raw \
+-drive file=${ram_boot_disk},if=none,format=raw,id=hd0 \
+-device virtio-blk-device,drive=hd0,serial="dummyserial" \
+-rtc base=localtime,clock=host \
+-netdev user,id=net0,hostfwd=tcp::2022-:22,hostfwd=tcp::2080-:80,hostfwd=tcp::2443-:443 \
+-device virtio-net-pci,netdev=net0 \
+-serial unix:/tmp/vm-console.sock,server=on,wait=off \
+-monitor unix:/tmp/vm-monitor.sock,server=on,wait=off \
+-nographic
+
+socat -,raw,echo=0,escape=0x1C unix:/tmp/vm-console.sock
+socat -,raw,echo=0,escape=0x1C unix:/tmp/qemu-monitor.sock
+
+socat -,raw,echo=0,escape=0x1C unix:/tmp/${PROJECT}-local-qemu_instance-console.sock
+socat -,raw,echo=0,escape=0x1C unix:/tmp/${PROJECT}-local-qemu_instance-monitor.sock
+
+echo "info status" | socat - UNIX-CONNECT:/tmp/${PROJECT}-local-qemu_instance-monitor.sock | grep -i "VM status:" | cut -b12-
+echo "system_powerdown" | socat - UNIX-CONNECT:/tmp/${PROJECT}-local-qemu_instance-monitor.sock
+
+find /dev/disk* -maxdepth 1 -user $USER | grep -E "^/dev/disk[0-9]+$" | xargs -n1 hdiutil detach
+
+
+
+podman network create server
+podman volume create pgdata
+podman run -d \
+    --name postgres \
+    -e POSTGRES_USER=nabu \
+    -e POSTGRES_PASSWORD=nabu \
+    -e POSTGRES_DB=nabu \
+    -v pgdata:/var/lib/postgresql/data \
+    -p [::]:5432:5432 \
+    --network server \
+    postgres:17
+
+podman stop postgres
+podman rm postgres
+podman volume rm pgdata
+podman network rm server
+
+podman run -it --rm --network server postgres:17 psql -h postgres -U postgres
+
+
+podman play kube --network private-network backend.yml
+podman play kube --down backend.yml
+podman ps
+podman pod ps
+
+podman pod stop backend
+podman pod rm -f backend
+
+podman network create --subnet=10.255.255.0/24 private-network
+
+----
+
+
+

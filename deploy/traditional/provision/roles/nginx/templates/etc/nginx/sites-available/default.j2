@@ -1,0 +1,49 @@
+
+server {
+
+    listen 80 default_server;
+    server_name _;
+    return 301 https://$host$request_uri;
+
+}
+
+server {
+
+    listen 443 ssl http2 default_server;
+    listen [::]:443 ssl http2 default_server;
+    server_name _;
+
+    root {{ default_document_root }};
+
+    ssl_certificate "{{ default_self_signed_ssl_cert }}";
+    ssl_certificate_key "{{ default_self_signed_ssl_key }}";
+    ssl_session_cache shared:SSL:1m;
+    ssl_session_timeout 10m;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_dhparam /etc/ssl/dhparams.pem;
+    ssl_prefer_server_ciphers on;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    error_page 401 /401.html;
+    error_page 404 /404.html;
+    error_page 500 502 503 504 /50x.html;
+
+    location ~ ^/(4|5)0[01234]\.html$ {
+        internal;
+        auth_basic off;
+
+        set $lang "en";
+        if ($http_accept_language ~* ^(pt)) {
+            set $lang "pt-pt";
+        }
+        if ($http_accept_language ~* ^(pt-br)$) {
+            set $lang $1;
+        }
+
+        root {{ default_document_root }}/$lang;
+    }
+
+}

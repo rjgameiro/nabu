@@ -1,0 +1,34 @@
+---
+
+app_descriptor: '{{ project }}_{{ workspace }}'
+app_fqdn: '{{ workspace }}.{{ project }}.{{ domain }}'
+
+app_rust_build_path: '/tmp/{{ app_descriptor }}/rust_build'
+
+app_root_path: '/srv/{{ app_descriptor }}'
+
+app_api_root_path: '{{ app_root_path }}/api'
+app_api_bin: 'bin'
+app_api_conf: 'conf'
+app_api_data: 'data'
+app_api_logs: 'logs'
+
+app_worker_root_path: '{{ app_root_path }}/worker'
+app_worker_bin: 'bin'
+app_worker_conf: 'conf'
+app_worker_data: 'data'
+app_worker_logs: 'logs'
+
+app_service_root_path: '{{ app_root_path }}/service'
+app_service_volumes: 'volumes'
+app_service_conf: 'conf'
+
+app_services:
+  - 'redis'
+  - 'postgres'
+
+app_site_root_path: '{{ app_root_path }}/site'
+app_site_cert: 'cert'
+app_site_conf: 'conf'
+app_site_include: '{{ app_site_conf }}/include'
+app_site_public: 'public'

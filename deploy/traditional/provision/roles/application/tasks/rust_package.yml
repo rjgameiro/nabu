@@ -1,0 +1,178 @@
+---
+
+- name: '{{ package.name }} : rust build product path'
+  set_fact:
+    rust_build_product_path: '{{ app_rust_build_path }}/target/{{ profile }}/{{ package.name }}'
+
+- name: '{{ package.name }} : building and deploying package [{{ package.name }}]'
+  debug:
+    msg: '{{ rust_build_product_path }}'
+
+- name: '{{ package.name }} : set package user'
+  set_fact:
+    package_user: "{{ app_descriptor }}_{{ package.user_suffix if package.user_suffix is defined else generic_worker_user_suffix }}"
+    package_group: "{{ app_descriptor }}_{{ package.group_suffix if package.group_suffix is defined else generic_worker_group_suffix }}"
+
+- name: '{{ package.name }} : set package install path'
+  set_fact:
+    package_install_path: '{{ app_worker_root_path }}{% if package.user_suffix is defined %}/{{ package_user }}{% endif %}'
+
+- name: '{{ package.name }} : package user and group'
+  debug:
+    msg: 'package_user: {{ package_user }}, package_group: {{ package_group }}'
+
+- block:
+
+    - name: 'ensure package root exists'
+      ansible.builtin.file:
+        state: 'directory'
+        path: '{{ item.path }}'
+        owner: '{{ app_user }}'
+        group: '{{ app_group }}'
+        mode: '0755'
+      with_items:
+        - { path: '{{ app_worker_root_path }}' }
+      when: 'package.user_suffix is not defined'
+
+    - name: '{{ package.name }} : ensure [{{ package_group }}] group exists'
+      ansible.builtin.group:
+        name: '{{ package_group }}'
+
+    - name: '{{ package.name }} : ensure [{{ package_user }}] user exists'
+      ansible.builtin.user:
+        name: '{{ package_user }}'
+        home: '/home/{{ package_user }}'
+        create_home: true
+        group: '{{ package_group }}'
+        shell: '/bin/bash'
+        password: '!'
+
+    - name: '{{ package.name }} : [{{ package_user }}] home permissions'
+      ansible.builtin.file:
+        path: '/home/{{ package_user }}'
+        mode: '0700'
+
+    - name: '{{ package.name }} : ensure the package install path exists'
+      ansible.builtin.file:
+        state: 'directory'
+        path: '{{ package_install_path }}'
+        owner: '{{ package_user }}'
+        group: '{{ package_group }}'
+        mode: '0755'
+      when: 'package.user_suffix is defined'
+
+  become: true
+
+- name: '{{ package.name }} : get binary pre build stat'
+  stat:
+    path : '{{ rust_build_product_path }}'
+  register: pre_build
+
+- name: '{{ package.name }} : cargo build'
+  shell:
+    cmd: '~/.cargo/bin/cargo build {% if profile == "release" %}--release{% endif %} --package {{ package.name }} 2>&1'
+    chdir: '{{ app_rust_build_path }}'
+  register: build
+  ignore_errors: true
+  changed_when: '"Compiling" in build.stdout'
+
+- name: '{{ package.name }} : build result'
+  debug:
+    msg: '{{ build.stdout }}'
+  failed_when: 'build.rc != 0'
+
+- name: '{{ package.name }} : get binary post build stat'
+  stat:
+    path : '{{ rust_build_product_path }}'
+  register: post_build
+
+- name: '{{ package.name }} : build product changed'
+  debug:
+    msg: 'changed'
+  when: >
+    (pre_build.stat.exists and post_build.stat.exists and pre_build.stat.checksum != post_build.stat.checksum)
+    or
+    (not pre_build.stat.exists and post_build.stat.exists)
+
+- block:
+
+    - name: '{{ package.name }} : ensure a directory structure for the package is in place'
+      ansible.builtin.file:
+        path: '{{ app_worker_root_path }}/{{ item.path }}'
+        state: directory
+        mode: '{{ item.mode | default("0755") }}'
+        owner: '{{ item.user | default("root") }}'
+        group: '{{ item.group | default("root")}}'
+      with_items:
+        - { path: '{{ app_worker_bin }}', user: '{{ package_user }}', group: '{{ package_group }}' }
+        - { path: '{{ app_worker_conf }}', user: '{{ package_user }}', group: '{{ package_group }}' }
+        - { path: '{{ app_worker_data }}', user: '{{ package_user }}', group: '{{ package_group }}' }
+        - { path: '{{ app_worker_logs }}', user: '{{ package_user }}', group: '{{ package_group }}' }
+
+    - name: '{{ package.name }} : install the latest package binary'
+      ansible.builtin.copy:
+        src: '{{ app_rust_build_path }}/target/{{ profile }}/{{ package.name }}'
+        dest: '{{ app_worker_root_path }}/{{ app_worker_bin }}/{{ package.name }}'
+        remote_src: true
+        owner: '{{ package_user }}'
+        group: '{{ package_group }}'
+        mode: '0700'
+      notify: 'restart packages'
+
+    - name: '{{ package.name }} : install the latest data files'
+      ansible.builtin.copy:
+        src: '{{ app_rust_build_path }}/{{ package.name }}/{{ app_worker_data }}/'
+        dest: '{{ app_worker_root_path }}/{{ app_worker_data }}'
+        remote_src: true
+        owner: '{{ package_user }}'
+        group: '{{ package_group }}'
+        mode: '0755'
+      notify: 'restart packages'
+      ignore_errors: true
+
+    - name: '{{ package.name }} : create package systemd service file'
+      template:
+        backup: false
+        src: 'templates/etc/systemd/system/service.j2'
+        dest: '{{ app_worker_root_path }}/{{ app_worker_conf }}/{{ app_descriptor }}.{{ package.name }}.service'
+        owner: '{{ package_user }}'
+        group: '{{ package_group }}'
+        mode: '0600'
+      when: 'package.start_on_boot is defined and package.start_on_boot'
+      notify: 'restart packages'
+
+    - name: '{{ package.name }} : activate systemd service file'
+      file:
+        src: '{{ app_worker_root_path }}/{{ app_worker_conf }}/{{ app_descriptor }}.{{ package.name }}.service'
+        dest: '/etc/systemd/system/{{ app_descriptor }}.{{ package.name }}.service'
+        state: 'link'
+      when: 'package.start_on_boot is defined and package.start_on_boot'
+      notify: 'restart packages'
+
+    - name: '{{ package.name }} : [{{ app_descriptor }}.{{ package.name }}] started and enabled at boot'
+      ansible.builtin.systemd:
+        name: '{{ app_descriptor }}.{{ package.name }}'
+        daemon_reload: true
+        state: started
+        enabled: true
+      when: 'package.start_on_boot is defined and package.start_on_boot'
+
+    - name: 'auto-start package'
+      ansible.builtin.systemd:
+        name: '{{ app_descriptor }}.{{ package.name }}'
+        daemon_reload: true
+        enabled: true
+      when: 'package.start_on_boot is defined and package.start_on_boot'
+
+    - name: '{{ package.name }} : api nginx include file'
+      template:
+        backup: false
+        src: 'templates/srv/project_workspace/site/conf/include/package.api_conf.j2'
+        dest: '{{ app_site_root_path }}/{{ app_site_include }}/{{ package.name }}.api_conf'
+        owner: '{{ app_user }}'
+        group: '{{ app_group }}'
+        mode: '0644'
+      notify: 'restart nginx_services'
+      when: 'package.api_prefixes is defined'
+
+  become: true

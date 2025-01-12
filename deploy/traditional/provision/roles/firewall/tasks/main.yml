@@ -1,0 +1,24 @@
+---
+
+- block:
+
+    - name: 'required packages'
+      apt:
+        state: 'latest'
+        pkg: '{{ item }}'
+      with_items: '{{ firewall_packages }}'
+
+    - name: 'allow ssh ingress'
+      ufw:
+        rule: "{{ 'allow' if (target is not defined or target == 'local') else 'limit' }}"
+        to_port: 'ssh'
+        proto: 'tcp'
+      when: 'target is defined'
+
+    - name: 'apply default deny policy'
+      ufw:
+        logging: 'off'
+        state: 'enabled'
+        policy: 'deny'
+
+  become: true

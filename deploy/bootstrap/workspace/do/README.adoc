@@ -1,0 +1,36 @@
+= Digital Ocean Workspace Setup
+
+This guide provides a step-by-step process for deploying and managing project workspaces (environments) .
+
+== Prerequisites
+- Install `doctl`, the official DigitalOcean CLI tool.
+- If 1Password CLI is installed, the script will use the op aws plugin to authenticate.
+- Create a https://docs.digitalocean.com/reference/api/create-personal-access-token/[personal access token] for authentication.
+
+== Authenticate `doctl` (not required if using 1Password)
+
+To authenticate `doctl` with your personal access token, use the following command:
+
+[code, shell]
+----
+doctl auth init
+----
+
+Follow the prompts to enter your personal access token.
+
+== Deploy
+
+To create a new DigitalOcean workspace, use the command below:
+
+[code, shell]
+----
+./backend.sh deploy my_project [development|staging|production|...]
+----
+== Delete
+
+To delete a DigitalOcean workspace, use the command below:
+
+[code, shell]
+----
+./backend.sh delete my_project [development|staging|production|...]
+----

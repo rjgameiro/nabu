@@ -1,0 +1,11 @@
+[package]
+name = "worker1"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+core = { path = "../core" }
+tracing = { version = "*", features = ["max_level_trace", "release_max_level_trace"] }
+tracing-subscriber = { version = "*", features = ["env-filter"] }
+tokio = { version = "*", features = ["full", "rt-multi-thread"] }

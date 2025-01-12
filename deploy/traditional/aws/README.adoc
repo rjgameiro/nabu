@@ -1,0 +1,11 @@
+= CREDENTIALS
+
+[source,shell]
+----
+terraform init \
+  -backend-config="assume_role={role_arn=\"${STATE_ROLE_ARN}\"}" \
+  -backend-config="key=${PROJECT}-aws.tfstate" \
+  -backend-config="bucket=${PROJECT}-terraform-state" \
+  -backend-config="dynamodb_table=${PROJECT}-terraform-state-lock" \
+  -reconfigure
+----

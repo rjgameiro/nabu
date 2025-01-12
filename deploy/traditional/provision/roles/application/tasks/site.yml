@@ -1,0 +1,78 @@
+---
+
+- name: 'ensure required directories exist'
+  ansible.builtin.file:
+    state: 'directory'
+    path: '{{ item.path }}'
+    mode: '{{ item.mode }}'
+    owner: '{{ item.owner }}'
+    group: '{{ item.group }}'
+  with_items:
+    - { path: '{{ app_site_root_path }}', mode: '0755', owner: '{{ app_user }}', group: '{{ app_group }}' }
+    - { path: '{{ app_site_root_path }}/{{ app_site_cert }}', mode: '0755', owner: '{{ app_user }}', group: '{{ app_group }}' }
+    - { path: '{{ app_site_root_path }}/{{ app_site_conf }}', mode: '0755', owner: '{{ app_user }}', group: '{{ app_group }}' }
+    - { path: '{{ app_site_root_path }}/{{ app_site_public }}', mode: '0755', owner: '{{ app_user }}', group: '{{ app_group }}' }
+    - { path: '{{ app_site_root_path }}/{{ app_site_include }}', mode: '0755', owner: '{{ app_user }}', group: '{{ app_group }}' }
+  become: true
+
+- name: 'push public html to nginx document root'
+  ansible.posix.synchronize:
+    mode: push
+    src: '{{ app_path }}/client/'
+    dest: '{{ app_site_root_path }}/{{ app_site_public }}'
+    verify_host: false
+    recursive: true
+    partial: true
+    owner: false
+    group: false
+    perms: false
+    times: false
+    delete: true
+    archive: false
+    checksum: true
+    rsync_path: "{{ rsync_path_map[ansible_architecture] | default('/usr/bin/rsync') }}"
+    rsync_opts:
+      - "--rsync-path='sudo rsync' --exclude=.DS_Store --exclude=site.yml --chown={{ app_user }}:{{ app_group}}"
+  vars:
+    rsync_path_map:
+      x86_64: "/usr/local/bin/rsync"
+      arm64: "/opt/homebrew/bin/rsync"
+
+- block:
+
+    - name: 'install ssl certificate for [{{ app_descriptor }}]'
+      ansible.builtin.copy:
+        dest: '{{ app_site_root_path }}/{{ app_site_cert }}/{{ app_fqdn }}.cert.pem'
+        content: "{{ lookup(\"community.general.onepassword\", \"{{ project }} ssl certificates\", section=workspace, field=\"full chain\", vault=\"Development\") }}"
+        owner: '{{ app_user }}'
+        group: '{{ app_user }}'
+        mode: '0644'
+      notify: 'restart nginx_services'
+
+    - name: 'install ssl private key for [{{ app_descriptor }}]'
+      ansible.builtin.copy:
+        dest: '{{ app_site_root_path }}/{{ app_site_cert }}/{{ app_fqdn }}.key.pem'
+        content: "{{ lookup(\"community.general.onepassword\", \"{{ project }} ssl certificates\", section=workspace, field=\"private key\", vault=\"Development\") }}"
+        owner: '{{ app_user }}'
+        group: '{{ app_user }}'
+        mode: '0600'
+      notify: 'restart nginx_services'
+
+    - name: 'default http and https sites'
+      template:
+        backup: false
+        src: 'templates/srv/project_workspace/site/conf/site.j2'
+        dest: '{{ app_site_root_path }}/{{ app_site_conf }}/{{ app_fqdn }}'
+        owner: '{{ app_user }}'
+        group: '{{ app_group }}'
+        mode: '0644'
+      notify: 'restart nginx_services'
+
+    - name: 'enable default http and https sites'
+      file:
+        src: '{{ app_site_root_path }}/{{ app_site_conf }}/{{ app_fqdn }}'
+        dest: '/etc/nginx/sites-enabled/{{ app_fqdn }}'
+        state: 'link'
+      notify: 'restart nginx_services'
+
+  become: true

@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Resources to host Terraform state for a project.
+
+Parameters:
+
+  Project:
+    Type: String
+    Description: "The name of the project in snake case"
+    AllowedPattern: "[a-z][a-z0-9_]+"
+    MinLength: 4
+    MaxLength: 16
+
+  ProjectPascalCase:
+    Type: String
+    Description: "The name of the project in pascal case"
+    AllowedPattern: "[A-Z][0-9a-zA-z]+"
+    MinLength: 4
+    MaxLength: 16
+
+  Principal:
+    Type: String
+    Description: "The ARN of the user that can assume the roles"
+    MinLength: 20
+    MaxLength: 200
+    AllowedPattern: "arn:aws:iam::[0-9]+:user/[a-zA-Z0-9]+"
+
+  Owner:
+    Type: String
+    Description: "The email address of the project owner"
+    MinLength: 5
+    MaxLength: 50
+    AllowedPattern: "[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}"
+
+Resources:
+
+  # S3 Bucket to store Terraform state
+  TerraformStateBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${Project}-terraform-state"
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: "DeleteOldVersionsAfter14Days"
+            Status: "Enabled"
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 14
+      Tags:
+        - Key: "project"
+          Value: !Ref Project
+        - Key: "workspace"
+          Value: "foundation"
+        - Key: "owner"
+          Value: !Ref Owner
+        - Key: "created-by"
+          Value: "CloudFormation"
+
+  TerraformStateLockTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${Project}-terraform-state-lock"
+      AttributeDefinitions:
+        - AttributeName: "LockID"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "LockID"
+          KeyType: "HASH"
+      BillingMode: PAY_PER_REQUEST
+      Tags:
+        - Key: "project"
+          Value: !Ref Project
+        - Key: "workspace"
+          Value: "foundation"
+        - Key: "owner"
+          Value: !Ref Owner
+        - Key: "created-by"
+          Value: "CloudFormation"
+
+  TerraformStatePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub "${ProjectPascalCase}PolicyForTerraformState"
+      Roles:
+        - !Ref FoundationRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # Permissions for DynamoDB table (state locking)
+          - Effect: Allow
+            Action:
+              - "dynamodb:PutItem"
+              - "dynamodb:GetItem"
+              - "dynamodb:DeleteItem"
+              - "dynamodb:Query"
+            Resource: !GetAtt TerraformStateLockTable.Arn
+          # Permissions for S3 bucket (state storage)
+          - Effect: Allow
+            Action:
+              - "s3:PutObject"
+              - "s3:GetObject"
+              - "s3:DeleteObject"
+              - "s3:ListBucket"
+            Resource:
+              - !Sub "arn:aws:s3:::${TerraformStateBucket}"
+              - !Sub "arn:aws:s3:::${TerraformStateBucket}/*"
+
+  # IAM Role for Terraform
+  FoundationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectPascalCase}RoleForFoundation"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              AWS: !Ref Principal
+            Action: "sts:AssumeRole"
+      Tags:
+        - Key: "project"
+          Value: !Ref Project
+        - Key: "workspace"
+          Value: "foundation"
+        - Key: "owner"
+          Value: !Ref Owner
+        - Key: "created-by"
+          Value: "CloudFormation"
+
+Outputs:
+
+  TerraformStateBucketName:
+    Description: "The name of the S3 bucket to store Terraform state"
+    Value: !Ref TerraformStateBucket
+
+  TerraformStateLockTableName:
+    Description: "The name of the DynamoDB table for Terraform state locks"
+    Value: !Ref TerraformStateLockTable
+
+  FoundationRoleArn:
+    Description: "The ARN of the IAM role for state backend use by Terraform"
+    Value: !GetAtt FoundationRole.Arn

@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+members = ["api1", "api2", "core", "worker1", "worker2"]
+default-members = ["api1", "api2", "worker1", "worker2"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+publish = false

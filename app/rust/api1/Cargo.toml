@@ -1,0 +1,13 @@
+[package]
+name = "api1"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+core = { path = "../core" }
+tracing = { version = "*", features = ["max_level_trace", "release_max_level_trace"] }
+tracing-subscriber = { version = "*", features = ["env-filter"] }
+tower-http = { version = "*", features = ["cors"] }
+tokio = { version = "*", features = ["full", "rt-multi-thread"] }
+axum = {  version = "*", features = ["tokio", "http1", "http2"] }

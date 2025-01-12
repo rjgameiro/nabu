@@ -1,0 +1,3 @@
+= Workspace Setup
+
+This directory contains templates and scripts for deploying and managing workspaces (deployment environments) into AWS, Azure or Digital Ocean. Refer to each of the directories for specific instructions on how to deploy.

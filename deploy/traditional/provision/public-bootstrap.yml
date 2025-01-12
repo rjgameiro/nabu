@@ -1,0 +1,48 @@
+---
+
+- hosts: 'all'
+  vars:
+    ansible_python_interpreter: '/usr/bin/python3.11'
+  gather_facts: false
+
+  pre_tasks:
+
+    - name: 'validate required playbook variables'
+      fail:
+        msg: '"{{ item }}" is not defined'
+      when: 'item not in vars or vars[item] is not defined'
+      with_items:
+        - 'project'
+        - 'target'
+        - 'upgrade'
+        - 'workspace'
+        - 'profile'
+
+    - name: 'wait up to 5m for a connection to the host'
+      ansible.builtin.wait_for_connection:
+        timeout: '{% if target == "qemu" %}20{% else %}300{% endif %}'
+
+- hosts: 'all'
+  vars:
+    ansible_python_interpreter: '/usr/bin/python3.11'
+
+  pre_tasks:
+
+    - name: 'fail if the host os family is not debian'
+      fail:
+        msg: 'this playbook supports only debian-based systems'
+      when: 'ansible_os_family != "Debian"'
+
+    - name: 'sync sys from hw clock (workaround for drift on mac os sleep)'
+      command: '/usr/sbin/hwclock --hctosys'
+      when: 'target == "qemu"'
+      changed_when: false
+      become: true
+
+  roles:
+
+    - role: 'sanitize'
+    - role: 'firewall'
+    - role: 'rust'
+    - role: 'nginx'
+    - role: 'podman'

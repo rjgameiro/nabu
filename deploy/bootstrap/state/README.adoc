@@ -1,0 +1,3 @@
+= Backend Setup
+
+This directory contains templates and scripts for deploying and managing Terraform state backends using Azure and/or AWS. Refer to each of the directories for specific instructions on how to deploy.

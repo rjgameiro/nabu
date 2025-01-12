@@ -1,0 +1,145 @@
+---
+
+- block:
+
+    - name: 'required packages for nginx installed'
+      apt:
+        state: 'present'
+        pkg: '{{ item }}'
+      with_items: '{{ nginx_packages }}'
+      notify: 'restart nginx_services'
+
+    - name: 'enable service'
+      service:
+        name: '{{ item }}'
+        enabled: true
+      with_items: '{{ nginx_services }}'
+
+    - name: 'ensure that the default document root exists'
+      file:
+        path: '{{ default_document_root }}'
+        state: 'directory'
+        owner: 'root'
+        group: 'root'
+        mode: '0755'
+
+    - name: 'populate the default document root directory'
+      ansible.posix.synchronize:
+        mode: 'push'
+        src: 'files/{{ default_document_root }}/'
+        dest: '{{ default_document_root }}/'
+        verify_host: false
+        recursive: true
+        partial: true
+        owner: false
+        group: false
+        perms: false
+        times: false
+        delete: true
+        archive: false
+        checksum: true
+        rsync_opts:
+          - "--exclude=.DSStore --exclude=ansible.yml"
+
+    - name: 'create dhparams'
+      openssl_dhparam:
+        path: '/etc/ssl/dhparams.pem'
+        size: 2048
+
+    - name: 'default ssl directories'
+      file:
+        path: '{{ item.path }}'
+        mode: '{{ item.mode }}'
+        state: 'directory'
+        owner: 'root'
+        group: 'root'
+      with_items:
+        - { path: '{{ default_ssl_private_directory }}', mode: '0700' }
+        - { path: '{{ default_ssl_requests_directory }}', mode: '0755' }
+        - { path: '{{ default_ssl_certs_directory }}', mode: '0755' }
+
+    - name: 'create self signed certificate key'
+      openssl_privatekey:
+        path: '{{ default_self_signed_ssl_key }}'
+        size: 2048
+        type: 'RSA'
+
+    - name: 'create self signed certificate signing request'
+      openssl_csr:
+        path: '{{ default_self_signed_ssl_csr }}'
+        privatekey_path: '{{ default_self_signed_ssl_key }}'
+        country_name: 'ZZ'
+        organization_name: 'Another Chaotic Experiment'
+        email_address: 'cob@ace.zz'
+        common_name: 'another.chaotic.experiment.zz'
+      notify: 'restart nginx_services'
+
+    - name: 'sign self signed certificate'
+      openssl_certificate:
+        provider: 'selfsigned'
+        selfsigned_not_after: '+36500d'
+        path: '{{ default_self_signed_ssl_cert }}'
+        privatekey_path: '{{ default_self_signed_ssl_key }}'
+        csr_path: '{{ default_self_signed_ssl_csr }}'
+      notify: 'restart nginx_services'
+
+    - name: 'self signed certificate permissions'
+      file:
+        path: '{{ item.path }}'
+        mode: '{{ item.mode }}'
+        owner: 'root'
+        group: 'root'
+      with_items:
+        - {path: '{{ default_self_signed_ssl_cert }}', mode: '0644'}
+        - {path: '{{ default_self_signed_ssl_key }}', mode: '0600'}
+      notify: 'restart nginx_services'
+
+    - name: 'nginx server configuration'
+      template:
+        backup: true
+        src: 'templates/{{ nginx_config_directory }}/nginx.conf.j2'
+        dest: '{{ nginx_config_directory }}/nginx.conf'
+        owner: 'root'
+        group: 'root'
+        mode: '0644'
+      notify: 'restart nginx_services'
+
+    - name: 'create default http and https site configuration'
+      template:
+        backup: true
+        src: 'templates/{{ nginx_config_directory }}/sites-available/default.j2'
+        dest: '{{ nginx_config_directory }}/sites-available/default'
+        owner: 'root'
+        group: 'root'
+        mode: '0644'
+      notify: 'restart nginx_services'
+
+    - name: 'enable default http and https sites'
+      file:
+        src: '/etc/nginx/sites-available/default'
+        dest: '/etc/nginx/sites-enabled/default'
+        owner: 'root'
+        group: 'root'
+        state: 'link'
+      notify: 'restart nginx_services'
+
+    - name: 'tune log file rotate count (to 16)'
+      replace:
+        path: '/etc/logrotate.d/nginx'
+        regexp: '^\s*rotate\s+[0-9]+'
+        replace: 'rotate 16'
+      notify: 'restart nginx_services'
+
+    - name: 'allow http ingress'
+      ufw:
+        rule: 'allow'
+        to_port: 80
+        proto: 'tcp'
+
+    - name: 'allow https ingress'
+      ufw:
+        rule: 'allow'
+        to_port: 443
+        proto: 'tcp'
+
+  become: true

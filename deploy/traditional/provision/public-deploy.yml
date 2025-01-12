@@ -1,0 +1,51 @@
+---
+
+- hosts: 'all'
+#  vars:
+#    ansible_python_interpreter: '/usr/bin/python3.11'
+  gather_facts: false
+
+  pre_tasks:
+
+    - name: 'validate required playbook variables'
+      fail:
+        msg: '"{{ item }}" is not defined'
+      when: 'item not in vars or vars[item] is not defined'
+      with_items:
+        - 'project'
+        - 'target'
+        - 'upgrade'
+        - 'workspace'
+        - 'profile'
+
+    - name: 'validate existing config for workspace'
+      fail:
+        msg: 'no config for workspace "{{ workspace }}"'
+      when: 'config[workspace] is not defined'
+
+    - name: 'wait up to 5m for a connection to the host'
+      ansible.builtin.wait_for_connection:
+        timeout: 20
+
+- hosts: 'all'
+#  vars:
+#    ansible_python_interpreter: '/usr/bin/python3.11'
+
+  pre_tasks:
+
+    - name: 'fail if the host os family is not debian'
+      fail:
+        msg: 'this playbook supports only debian-based systems'
+      when: 'ansible_os_family != "Debian"'
+
+    - name: 'sync sys from hw clock (workaround for drift on mac os sleep)'
+      command: '/usr/sbin/hwclock --hctosys'
+      when: 'target == "qemu"'
+      changed_when: false
+      become: true
+
+  roles:
+
+    - role: 'application'
+      vars:
+        app_path: '../../../app'

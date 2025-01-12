@@ -1,0 +1,40 @@
+= AWS Workspace Deployment
+
+== Overview
+This guide outlines the steps to deploy and delete an AWS CloudFormation stack tailored for setting up the required resources to support a workspace environment (e.g., development, staging, production). It creates a resource group to organize the resources generated during stack execution.
+
+== Prerequisites
+Ensure the following:
+
+- AWS CLI is installed and configured (`aws configure`) on your system.
+- If 1Password CLI is installed, the script will use the `op` aws plugin to authenticate.
+- You have the required permissions to create resources using the selected profile.
+
+== Environment Variables
+
+The following environment variables can be set to customize the deployment:
+
+`WORKSPACE_OWNER` (required) - the email address of the project owner (will be used for tagging the resources). If not provided the script will try to retrieve it from 1Password ([.monospaced]#op://Development/AWS [PROJECT NAME] Terraform/owner#).
+
+`WORKSPACE_AWS_PRINCIPAL` (required) - the AWS IAM Principal ARN (user or role) that will be configured in the assume role configuration for the Terraform to deploy resources. If not provided the script will try to retrieve it from 1Password ([.monospaced]#op://Development/AWS [PROJECT NAME] Terraform/workspace principal arn#).
+
+`AWS_REGION` (optional) - the AWS region for deployment of the CloudFormation stack (default is eu-west-1).
+
+`AWS_PROFILE` (optional) - the AWS profile to use for deployment (if you have multiple AWS profiles).
+
+== Deploy
+
+To deploy the CloudFormation stack, run the deployment script:
+
+[code, shell]
+----
+./backend.sh deploy [sandbox|production|...]
+----
+== Delete
+
+To delete the deployed stack, use the commands below:
+
+[code, shell]
+----
+./workspace.sh delete [sandbox|production|...]
+----

@@ -1,0 +1,15 @@
+galaxy_info:
+
+  author: 'Ricardo Gameiro'
+  description: 'Setup rust based APIs with a static (redirects all HTTP to HTTPS).'
+
+  license: 'MIT'
+
+  min_ansible_version: '2.1'
+
+  galaxy_tags: []
+
+dependencies:
+  - role: 'firewall'
+  - role: 'nginx'
+  - role: 'rust'

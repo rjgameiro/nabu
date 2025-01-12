@@ -1,0 +1,56 @@
+---
+
+- block:
+
+    - name: 'ensure required directories exist'
+      ansible.builtin.file:
+        state: 'directory'
+        path: '{{ item.path }}'
+        mode: '{{ item.mode | default("0755") }}'
+        owner: '{{ service_user.name }}'
+        group: '{{ service_group.name }}'
+      with_items:
+        - { path: '{{ app_service_root_path }}/{{ app_service_volumes }}/redis' }
+
+    - name: 'setup a redis container'
+      containers.podman.podman_container:
+        name: 'redis'
+        image: '{{ service_details.image }}'
+        ports:
+          - "{{ bind_port }}:6379"
+        user: "{{ service_user.uid }}:{{ service_user.group }}"
+        volume:
+          - "{{ app_service_root_path }}/{{ app_service_volumes }}/redis:/data"
+        state: 'created'
+      notify: 'restart redis'
+
+    - name: 'generate systemd unit file for redis container'
+      containers.podman.podman_generate_systemd:
+        name: redis
+        new: false
+        container_prefix: 'container'
+        separator: '-'
+        after: 'network.target'
+        restart_policy: 'on-failure'
+        restart_sec: 10
+        dest: '{{ app_service_root_path }}/{{ app_service_conf }}/'
+      register: 'redis_systemd_unit'
+
+    - name: 'activate redis systemd service file'
+      file:
+        src: '{{ app_service_root_path }}/{{ app_service_conf }}/container-redis.service'
+        dest: '/etc/systemd/system/container-redis.service'
+        state: 'link'
+      notify: 'restart redis'
+
+    - name: 'auto-start redis'
+      ansible.builtin.systemd:
+        name: 'container-redis'
+        daemon_reload: true
+        enabled: true
+        state: 'started'
+
+  become: true
+
+- debug:
+    var: redis_systemd_unit

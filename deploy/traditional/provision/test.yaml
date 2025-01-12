@@ -1,0 +1,13 @@
+---
+- hosts: 'all'
+  gather_facts: false
+  connection: local
+  vars:
+    project: 'nabu'
+    workspace: 'develop'
+
+  tasks:
+
+    - name: 'set fact with [ssl certificates]'
+      debug:
+        msg: "{{ lookup('community.general.onepassword', '{{ project }} ssl certificates', section=workspace, field='full chain', vault='Development') }}"

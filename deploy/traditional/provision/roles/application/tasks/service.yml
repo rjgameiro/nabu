@@ -1,0 +1,36 @@
+---
+
+- block:
+
+    - name: 'ensure "{{ app_descriptor }}_{{ service }}" group exists'
+      ansible.builtin.group:
+        name: '{{ app_descriptor }}_{{ service }}'
+      register: service_group
+
+    - name: 'debug service_group'
+      debug:
+          var: service_group
+
+    - name: 'ensure "{{ app_descriptor }}_{{ service }}" user exists'
+      ansible.builtin.user:
+        name: '{{ app_descriptor }}_{{ service }}'
+        home: '/home/{{ app_descriptor }}_{{ service }}'
+        create_home: true
+        group: '{{ app_descriptor }}_{{ service }}'
+        shell: '/bin/bash'
+        password: '!'
+      register: service_user
+
+    - name: 'debug service_user'
+      debug:
+        var: service_user
+
+    - name: 'set "{{ app_descriptor }}_{{ service }}" home permissions'
+      ansible.builtin.file:
+        path: '/home/{{ app_descriptor }}_{{ service }}'
+        mode: '0700'
+
+  become: true
+
+- name: '{{ service }} : setup'
+  include_tasks: "{{ role_path }}/tasks/services/{{ service }}.yml"

@@ -1,0 +1,8 @@
+---
+- name: "Check if '{{ entry }}' is present on the line started with '{{ prefix }}' in {{ file }}"
+  hosts: localhost
+  become: "{{ become_root | default('no') }}"
+  tasks:
+    - name: "Check '{{ entry }}' exists in line with '{{ prefix | regex_escape }}'"
+      shell: "grep -E '^\\s*{{ prefix | regex_escape }}\\b.*\\b{{ entry | regex_escape }}\\b.*$' {{ file }}"
+      register: result

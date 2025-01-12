@@ -1,0 +1,70 @@
+---
+
+- block:
+
+    - name: 'set a hostname'
+      ansible.builtin.hostname:
+        name: '{{ normalized_name }}'
+      when: 'normalized_name is defined'
+
+    - name: 'ensure normalized hostname exists in /etc/hosts'
+      ansible.builtin.lineinfile:
+        path: '/etc/hosts'
+        regexp: '^127\.0\.1\.1\b'
+        line: "127.0.1.1\t{{ normalized_name }} {{ normalized_name.split('.')[0] }}"
+      when: 'normalized_name is defined'
+
+    - name: 'update apt cache'
+      apt:
+        update_cache: true
+      when: 'upgrade | default(false) | bool'
+
+    - name: 'upgrade packages (safe)'
+      apt:
+        upgrade: 'safe'
+        force_apt_get: true
+        force: true
+      when: 'upgrade | default(false) | bool'
+
+    - name: 'bootstrap packages installed'
+      apt:
+        state: 'present'
+        pkg: '{{ item }}'
+      with_items: '{{ bootstrap_packages }}'
+
+    - name: '[{{ workspace }}] bootstrap packages installed'
+      apt:
+        state: 'present'
+        pkg: '{{ item }}'
+      with_items: '{{ workspace_bootstrap_packages[workspace] | default([]) }}'
+      when: 'workspace is defined'
+
+    - name: '[{{ target }}] bootstrap packages installed'
+      apt:
+        state: 'present'
+        pkg: '{{ item }}'
+      with_items: '{{ target_bootstrap_packages[target] | default([]) }}'
+      when: 'target is defined'
+
+    - name: '[{{ target }}] bootstrap services enabled'
+      service:
+        name: '{{ item }}'
+        enabled: true
+      with_items: '{{ target_bootstrap_services[target] | default([]) }}'
+      when: 'target is defined'
+
+    - name: 'C.UTF-8 locale exists'
+      community.general.locale_gen:
+        name: 'C.UTF-8'
+        state: 'present'
+
+    - name: '/etc/environment exists and contains LC_CTYPE'
+      ansible.builtin.lineinfile:
+        path: '/etc/environment'
+        regexp: '^LC_CTYPE='
+        line: 'LC_CTYPE=C.UTF-8'
+        owner: 'root'
+        group: 'root'
+        mode: '0644'
+
+  become: true

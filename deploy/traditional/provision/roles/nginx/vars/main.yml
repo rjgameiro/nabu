@@ -1,0 +1,9 @@
+---
+
+nginx_packages:
+  - 'openssl'
+  - 'python3-cryptography'
+  - 'nginx-extras'
+
+nginx_services:
+  - 'nginx'

@@ -1,0 +1,11 @@
+[package]
+name = "nabu_worker2"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+nabu_core = { path = "../nabu_core" }
+tracing = { version = "*", features = ["max_level_trace", "release_max_level_trace"] }
+tracing-subscriber = { version = "*", features = ["env-filter"] }
+tokio = { version = "*", features = ["full", "rt-multi-thread"] }

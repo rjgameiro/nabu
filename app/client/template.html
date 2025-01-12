@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Preview</title>
+    <style>
+        body {
+            background-color: #f0f0f0;
+            display: flex;
+            margin: 0;
+            height: 100vh;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background-color: white;
+            width: 80%;
+            max-width: 400px;
+            padding: 40px;
+            border-radius: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        input, button, #response {
+            font-family: Helvetica, sans-serif;
+            font-size: 14px;
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            cursor: pointer;
+        }
+        #response {
+            background-color: #f9f9f9;
+            display: flex;
+            font-family: Monaco, monospace;
+            font-size: 14px;
+            height: calc(140px);
+            padding: 5px 20px;
+            align-items: center;
+            justify-content: left;
+            text-align: left;
+            overflow: hidden;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <input type="text" id="text" placeholder="Enter some text...">
+    <button onclick="service('/api/v1/api1/lower', ':8001')">LOWER</button>
+    <button onclick="service('/api/v1/api2/upper', ':8002')">UPPER</button>
+    <div id="response">
+        <p id="response-text"></p>
+    </div>
+</div>
+
+<script>
+    async function service(endpoint, port = "") {
+        var host = window.location.hostname;
+        var prefix = host === 'localhost' ? 'http://localhost' + port : '';
+        const text = document.getElementById('text').value;
+        const url = text ? `${prefix}${endpoint}?text=${encodeURIComponent(text)}` : endpoint;
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            document.getElementById('response-text').innerText = JSON.stringify(data, null, 2);
+        } catch (error) {
+            document.getElementById('response-text').innerText = '[ERROR] ' + error.message;
+        }
+
+    }
+</script>
+</body>
+</html>

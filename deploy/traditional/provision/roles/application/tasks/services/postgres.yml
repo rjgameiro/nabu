@@ -1,0 +1,64 @@
+---
+
+- block:
+
+    - name: 'ensure required directories exist'
+      ansible.builtin.file:
+        state: 'directory'
+        path: '{{ item.path }}'
+        mode: '{{ item.mode | default("0755") }}'
+        owner: '{{ service_user.name }}'
+        group: '{{ service_group.name }}'
+      with_items:
+        - { path: '{{ app_service_root_path }}/{{ app_service_volumes }}/postgres' }
+
+    - name: 'get postgres password for workspace: {{ workspace }}'
+      set_fact:
+        postgres_password: "{{ lookup(\"community.general.onepassword\", \"{{ project }} service passwords\", section=\"postgres\", field=workspace, vault=\"Development\") }}"
+      failed_when: postgres_password is not defined or postgres_password == ''
+
+    - name: 'setup a postgres container'
+      containers.podman.podman_container:
+        name: 'postgres'
+        image: '{{ service_details.image }}'
+        ports:
+          - "{{ bind_port }}:5432"
+        env:
+          POSTGRES_USER: "{{ app_descriptor }}"
+          POSTGRES_PASSWORD: "{{ postgres_password }}"
+          POSTGRES_DB: "{{ app_descriptor }}"
+        user: "{{ service_user.uid }}:{{ service_user.group }}"
+        volume:
+          - "{{ app_service_root_path }}/{{ app_service_volumes }}/postgres:/var/lib/postgresql/data"
+        state: 'created'
+      notify: 'restart postgres'
+
+    - name: 'generate systemd unit file for postgres container'
+      containers.podman.podman_generate_systemd:
+        name: 'postgres'
+        new: false
+        container_prefix: 'container'
+        separator: '-'
+        after: 'network.target'
+        restart_policy: 'on-failure'
+        restart_sec: 10
+        dest: '{{ app_service_root_path }}/{{ app_service_conf }}/'
+      register: 'postgres_systemd_unit'
+
+    - name: 'activate postgres systemd service file'
+      file:
+        src: '{{ app_service_root_path }}/{{ app_service_conf }}/container-postgres.service'
+        dest: '/etc/systemd/system/container-postgres.service'
+        state: 'link'
+      notify: 'restart postgres'
+
+    - name: 'auto-start postgres'
+      ansible.builtin.systemd:
+        name: 'container-postgres'
+        daemon_reload: true
+        enabled: true
+
+  become: true
+
+- debug:
+    var: postgres_systemd_unit

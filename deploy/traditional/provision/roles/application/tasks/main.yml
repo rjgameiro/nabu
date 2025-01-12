@@ -1,0 +1,43 @@
+---
+
+- block:
+
+    - name: 'ensure "{{ app_group }}" group exists'
+      ansible.builtin.group:
+        name: '{{ app_group }}'
+
+    - name: 'ensure "{{ app_user }}" user exists'
+      ansible.builtin.user:
+        name: '{{ app_user }}'
+        home: '/home/{{ app_user }}'
+        create_home: true
+        group: '{{ app_group }}'
+        shell: '/bin/bash'
+        password: '!'
+
+    - name: 'set "{{ app_user }}" home permissions'
+      ansible.builtin.file:
+        path: '/home/{{ app_user }}'
+        mode: '0700'
+
+    - name: 'ensure required directories exist'
+      ansible.builtin.file:
+        state: 'directory'
+        path: '{{ item.path }}'
+        mode: '{{ item.mode | default("0755") }}'
+        owner: '{{ item.owner | default( app_user | default ("root") ) }}'
+        group: '{{ item.group | default( app_group | default ("root") )  }}'
+      with_items:
+        - { path: '{{ app_root_path }}' }
+
+  become: true
+
+- name: 'services'
+  include_tasks: "{{ role_path }}/tasks/services.yml"
+
+- name: 'site'
+  include_tasks: "{{ role_path }}/tasks/site.yml"
+
+- name: 'rust_packages'
+  include_tasks: "{{ role_path }}/tasks/rust_packages.yml"
+

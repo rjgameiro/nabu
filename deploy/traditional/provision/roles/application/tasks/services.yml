@@ -1,0 +1,49 @@
+---
+
+- name: 'ensure required directories exist'
+  ansible.builtin.file:
+    state: 'directory'
+    path: '{{ item.path }}'
+    mode: '{{ item.mode | default("0755") }}'
+    owner: '{{ item.owner | default( app_user | default ("root") ) }}'
+    group: '{{ item.group | default( app_group | default ("root") )  }}'
+  with_items:
+    - { path: '{{ app_service_root_path }}' }
+    - { path: '{{ app_service_root_path }}/{{ app_service_volumes }}' }
+    - { path: '{{ app_service_root_path }}/{{ app_service_conf }}' }
+  become: true
+
+- name: 'set the path to the yaml services file'
+  set_fact:
+    services_yml: '{{ app_path }}/services.yml'
+
+- name: 'load and parse the services file'
+  set_fact:
+    services: "{{ lookup('file', services_yml) | from_yaml }}"
+
+- name: 'debug services'
+  debug:
+    var: services
+
+- name: 'set the path to the yaml rust apis file'
+  set_fact:
+    rust_packages_yml: '{{ app_path }}/rust/packages.yml'
+
+- name: 'load and parse the rust packages file'
+  set_fact:
+    rust_packages: "{{ lookup('file', rust_packages_yml) | from_yaml }}"
+
+- name: 'iterate all available services'
+  include_tasks: "{{ role_path }}/tasks/service.yml"
+  when: 'service in services'
+  loop: '{{ app_services }}'
+  loop_control:
+    loop_var: 'service'
+    index_var: 'service_index'
+  vars:
+    service_details: '{{ services[service] }}'
+    bind_port: '{{ (config[workspace].bind_start_port | default(3000) | int) + (config.general.service_port_delta | default(0) | int) + service_index * (config.general.service_port_step | default(5) | int) }}'
+    enabled: >-
+      {{ rust_packages | selectattr('uses', 'defined') 
+                       | selectattr('uses', 'contains', service) 
+                       | list | length > 0 }}

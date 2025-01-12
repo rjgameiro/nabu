@@ -1,0 +1,43 @@
+
+server {
+
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name {{ app_fqdn }};
+
+    root "{{ app_site_root_path }}/{{ app_site_public }}";
+
+    ssl_certificate "{{ app_site_root_path }}/{{ app_site_cert }}/{{ app_fqdn }}.cert.pem";
+    ssl_certificate_key "{{ app_site_root_path }}/{{ app_site_cert }}/{{ app_fqdn }}.key.pem";
+    ssl_session_cache shared:SSL:1m;
+    ssl_session_timeout 10m;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_dhparam "/etc/ssl/dhparams.pem";
+    ssl_prefer_server_ciphers on;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    include "{{ app_site_root_path }}/{{ app_site_include }}/*.api_conf";
+
+    error_page 401 /401.html;
+    error_page 404 /404.html;
+    error_page 500 502 503 504 /50x.html;
+
+    location ~ ^/(4|5)0[01234]\.html$ {
+        internal;
+        auth_basic off;
+
+        set $lang "en";
+        if ($http_accept_language ~* ^(pt)) {
+            set $lang "pt-pt";
+        }
+        if ($http_accept_language ~* ^(pt-br)$) {
+            set $lang $1;
+        }
+
+        root "{{ default_document_root }}/$lang";
+    }
+
+}

@@ -1,0 +1,3 @@
+= Infra
+
+rsync --exclude target --exclude .terraform --exclude .terraform.lock.hcl -avz deploy ../nabu

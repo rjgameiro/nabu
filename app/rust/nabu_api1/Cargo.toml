@@ -1,0 +1,13 @@
+[package]
+name = "nabu_api1"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+nabu_core = { path = "../nabu_core" }
+tracing = { version = "*", features = ["max_level_trace", "release_max_level_trace"] }
+tracing-subscriber = { version = "*", features = ["env-filter"] }
+tower-http = { version = "*", features = ["cors"] }
+tokio = { version = "*", features = ["full", "rt-multi-thread"] }
+axum = {  version = "*", features = ["tokio", "http1", "http2"] }

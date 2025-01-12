@@ -1,0 +1,15 @@
+---
+- name: "ensure ssh config entry is present for '{{ ssh_fqdn }}'"
+  hosts: localhost
+  tasks:
+  - ansible.builtin.blockinfile:
+      path: '~/.ssh/config'
+      state: '{{ state }}'
+      marker: "# {mark} : {{ ssh_fqdn }}"
+      block: |
+        Host {{ ssh_fqdn }} {{ ssh_fqdn | split('.') | first }}
+          User deployer
+          StrictHostKeyChecking no
+          UserKnownHostsFile /dev/null
+          Hostname 127.0.0.1
+          Port {{ ssh_port }}

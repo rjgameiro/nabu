@@ -1,0 +1,86 @@
+= Azure Workspace Deployment
+
+== Overview
+This guide outlines the steps to deploy and delete an Azure Bicep template tailored for setting up the required resources to support a workspace environment (e.g., development, staging, production).
+
+== Prerequisites
+
+=== Log in to Azure
+
+Log in to your Azure account by running:
+
+`az login`
+
+=== Create an App Registration (once)
+
+If you do not have an App Registration already set up, create one in Azure Active Directory (Azure AD). This will establish a Service Principal for role-based access control (RBAC), enabling Terraform to authenticate and manage resources programmatically.
+
+Run the following command (replacing MyProject with your project name):
+
+[source, shell]
+----
+az ad sp create-for-rbac \
+  --name MyProjectTerraform
+
+{
+  "appId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "displayName": "MyProjectTerraform",
+  "password": "HIDDEN",
+  "tenant": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+}
+----
+*Note:* save the *password* attribute securely as it will be needed later.
+
+You will need additional information about the Principal (specifically the *Principal ID* to use when referring to it):
+
+[source, shell]
+----
+az ad sp show \
+  --id aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa \
+  --query "{id: id}"
+
+{
+  "id":    "cccccccc-cccc-cccc-cccc-cccccccccccc"
+}
+----
+
+You will also need the Key ID for the password created earlier:
+
+[source, shell]
+----
+az ad app credential list \
+  --id aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa \
+  --query "[].{hint: hint, keyId: keyId}"
+
+[{
+    "hint": "HID",
+    "keyId": "dddddddd-dddd-dddd-dddd-dddddddddddd"
+}]
+----
+
+== Environment Variables
+
+The following environment variables can be set to customize the deployment:
+
+`BACKEND_OWNER` (required) - the email address of the project owner (will be used for tagging the resources). If not provided the script will try to retrieve it from 1Password ([.monospaced]#op://Development/AWS [PROJECT NAME] Terraform/owner#).
+
+`STATE_AZURE_PRINCIPAL` (required) - the Principal ID (created earlier) that will be used for Terraform to deploy resources. If not provided the script will try to retrieve it from 1Password ([.monospaced]#op://Development/Azure [PROJECT NAME] Terraform/id#).
+
+`AZURE_LOCATION` (optional) - the Azure region for deployment of the Terraform S3 backend (default is swedencentral).
+
+== Deploy
+
+To deploy the Bicep template, run the deployment script:
+
+[code, shell]
+----
+./workspace.sh deploy [sandbox|production|...]
+----
+== Delete
+
+To delete the deployed Bicep template, use the commands below:
+
+[code, shell]
+----
+./workspace.sh delete [sandbox|production|...]
+----

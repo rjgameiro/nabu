@@ -1,0 +1,12 @@
+galaxy_info:
+
+  author: 'Ricardo Gameiro'
+  description: 'Install a Rust build environment for the user that is connecting by SSH.'
+
+  license: 'MIT'
+
+  min_ansible_version: '2.1'
+
+  galaxy_tags: []
+
+dependencies: []

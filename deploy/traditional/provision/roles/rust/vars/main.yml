@@ -1,0 +1,4 @@
+---
+
+rust_required_packages:
+  - 'build-essential'

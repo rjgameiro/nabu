@@ -1,0 +1,10 @@
+---
+- name: "Ensure '{{ entry }}' is absent on the line started with '{{ prefix }}' in {{ file }}"
+  hosts: localhost
+  become: "{{ become_root | default('no') }}"
+  tasks:
+    - name: "Remove '{{ entry }}' from the line with '{{ prefix | regex_escape }}'"
+      replace:
+        path: "{{ file }}"
+        regexp: '^(\s*{{ prefix | regex_escape }}\s.*?)(\s{{ entry | regex_escape }}\b)(.*)$'
+        replace: '\1\3'

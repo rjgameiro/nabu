@@ -1,0 +1,20 @@
+---
+
+bootstrap_packages:
+  - 'locales'
+  - 'rsync'
+  - 'curl'
+
+workspace_bootstrap_packages:
+  local: []
+  development: []
+
+workspace_bootstrap_services:
+
+target_bootstrap_packages:
+  qemu:
+    - 'qemu-guest-agent'
+
+target_bootstrap_services:
+  qemu:
+    - 'qemu-guest-agent'

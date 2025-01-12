@@ -1,0 +1,12 @@
+galaxy_info:
+
+  author: 'Ricardo Gameiro'
+  description: 'Setup podman.'
+
+  license: 'MIT'
+
+  min_ansible_version: '2.1'
+
+  galaxy_tags: []
+
+dependencies: []

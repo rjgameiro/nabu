@@ -1,0 +1,43 @@
+---
+
+- name: 'required packages for building rust applications'
+  apt:
+    state: 'present'
+    pkg: '{{ item }}'
+  with_items: '{{ rust_required_packages }}'
+  become: true
+
+- name: 'is cargo installed?'
+  stat:
+    path: '~/.cargo/bin/cargo'
+  register: 'cargo'
+
+- name: 'download installer'
+  get_url:
+    url: 'https://sh.rustup.rs'
+    dest: '/tmp/rustup.sh'
+    mode: '0755'
+    force: true
+  when: 'not cargo.stat.exists'
+
+- name: 'install rustup'
+  ansible.builtin.command: '/tmp/rustup.sh -y'
+  args:
+    creates: '~/.cargo/bin/rustup'
+
+- name: 'install rust toolchain(s)'
+  ansible.builtin.command: '~/.cargo/bin/rustup toolchain install {{ item }}'
+  args:
+    creates: '~/.rustup/toolchains/{{ item }}-{{ ansible_architecture }}-unknown-linux-gnu'
+  loop: "{{ rust_toolchains }}"
+
+- name: 'update toolchain(s)'
+  ansible.builtin.command: '~/.cargo/bin/rustup update'
+  register: 'rustup_update'
+  changed_when: '"installed" in rustup_update.stdout or "updated" in rustup_update.stdout'
+  loop: "{{ rust_toolchains }}"
+
+- name: 'set default toolchain'
+  ansible.builtin.command: '~/.cargo/bin/rustup default {{ rust_default_toolchain }}'
+  args:
+    creates: '~/.rustup/toolchains/{{ rust_default_toolchain }}-{{ ansible_architecture }}-unknown-linux-gnu'

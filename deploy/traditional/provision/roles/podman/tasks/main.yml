@@ -1,0 +1,11 @@
+---
+
+- block:
+
+    - name: 'required packages for podman installed'
+      apt:
+        state: 'present'
+        pkg: '{{ item }}'
+      with_items: '{{ podman_packages }}'
+
+  become: true

@@ -1,0 +1,27 @@
+---
+
+- name: 'restart packages'
+  ansible.builtin.systemd:
+    name: '{{ app_descriptor }}.{{ package.name }}'
+    daemon_reload: true
+    state: restarted
+    enabled: true
+  become: true
+  when: 'package.start_on_boot is defined and package.start_on_boot'
+  with_items: '{{ rust_packages }}'
+  loop_control:
+    loop_var: 'package'
+
+- name: 'restart redis'
+  ansible.builtin.systemd:
+    name: 'container-redis'
+    daemon_reload: true
+    state: restarted
+  become: true
+
+- name: 'restart postgres'
+  ansible.builtin.systemd:
+    name: 'container-postgres'
+    daemon_reload: true
+    state: restarted
+  become: true

@@ -1,0 +1,52 @@
+= PROVISION
+
+[source, shell]
+----
+ansible-playbook public-deploy.yml \
+  -i f0.local.${PROJECT}, \
+  --user deployer \
+  --extra-vars="project=${PROJECT}" \
+  --extra-vars="domain=bungeebug.com" \
+  --extra-vars="target=qemu" \
+  --extra-vars="upgrade=true" \
+  --extra-vars="workspace=develop" \
+  --extra-vars="profile=debug" \
+  --extra-vars="normalized_name=f0.local.${PROJECT}"
+
+[ -n "${PROJECT}" ] && ansible-playbook public-deploy.yml \
+  -i f0.sandbox.aws.${PROJECT}.bungeebug.com, \
+  --user deployer \
+  --extra-vars="project=${PROJECT}" \
+  --extra-vars="domain=bungeebug.com" \
+  --extra-vars="target=azure" \
+  --extra-vars="upgrade=true" \
+  --extra-vars="workspace=stage" \
+  --extra-vars="profile=debug" \
+  --extra-vars="normalized_name=f0.sandbox.${PROJECT}"
+
+[ -n "${PROJECT}" ] && ansible-playbook public-deploy.yml \
+  -i f0.sandbox.azure.${PROJECT}.bungeebug.com, \
+  --user deployer \
+  --extra-vars="project=${PROJECT}" \
+  --extra-vars="domain=bungeebug.com" \
+  --extra-vars="target=azure" \
+  --extra-vars="upgrade=true" \
+  --extra-vars="workspace=stage" \
+  --extra-vars="profile=debug" \
+  --extra-vars="normalized_name=f0.sandbox.${PROJECT}"
+
+ansible-playbook public-deploy.yml \
+  -i f0.sandbox.${PROJECT}.bungeebug.com, \
+  --user deployer \
+  --extra-vars="project=${PROJECT}" \
+  --extra-vars="domain=bungeebug.com" \
+  --extra-vars="target=do" \
+  --extra-vars="upgrade=true" \
+  --extra-vars="workspace=stage" \
+  --extra-vars="profile=debug" \
+  --extra-vars="normalized_name=f0.sandbox.${PROJECT}"
+
+
+----
+
+

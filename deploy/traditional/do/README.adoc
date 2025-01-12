@@ -1,0 +1,44 @@
+= CREDENTIALS
+
+
+
+[source,shell]
+----
+export PROJECT=my_project
+export DOMAIN=my_domain.tld
+
+export AWS_ACCESS_KEY_ID=$(op read 'op://Development/AWS Personal Access Key/access key id')
+export AWS_SECRET_ACCESS_KEY=$(op read 'op://Development/AWS Personal Access Key/secret access key')
+
+export STATE_ROLE_ARN=$(op read "op://Development/DO ${PROJECT} Terraform/backend role arn")
+export DEPLOYMENT_OWNER=$(op read "op://Development/DO ${PROJECT} Terraform/owner")
+----
+
+
+[source,shell]
+----
+export DEPLOYMENT_PROJECT=mensura
+
+export AWS_ACCESS_KEY_ID=$(op read 'op://Development/AWS Personal Access Key/access key id')
+export AWS_SECRET_ACCESS_KEY=$(op read 'op://Development/AWS Personal Access Key/secret access key')
+
+export DEPLOYMENT_STATE_ROLE_ARN=$(op read "op://Development/DO ${DEPLOYMENT_PROJECT} Terraform/backend role arn")
+
+export MANAGEMENT_KEY=$(op read "op://Personal/RGAMEIRO Remote Access/public key")
+export DEPLOYER_KEY=$(op read "op://Development/${DEPLOYMENT_PROJECT} $(terraform workspace show) Deployer/public key")
+export DEPLOYMENT_OWNER=$(op read "op://Development/DO ${DEPLOYMENT_PROJECT} Terraform/owner")
+
+export DIGITALOCEAN_TOKEN=$(op read "op://Development/DO ${DEPLOYMENT_PROJECT} Terraform/token")
+export LINODE_TOKEN=$(op read "op://Development/Linode ${DEPLOYMENT_PROJECT} DNS Token/token")
+
+export TF_VAR_project_name="${DEPLOYMENT_PROJECT}"
+export TF_VAR_management_key="${MANAGEMENT_KEY}"
+export TF_VAR_deployer_key="${DEPLOYER_KEY}"
+export TF_VAR_owner="${DEPLOYMENT_OWNER}"
+
+tofu init \
+  -backend-config="assume_role={role_arn=\"${STATE_ROLE_ARN}\"}" \
+  -backend-config="key=${PROJECT}-do.tfstate" \
+  -backend-config="bucket=${PROJECT}-terraform-state" \
+  -backend-config="dynamodb_table=${PROJECT}-terraform-state-lock"
+----
