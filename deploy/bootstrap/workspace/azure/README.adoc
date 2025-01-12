@@ -64,7 +64,7 @@ The following environment variables can be set to customize the deployment:
 
 `BACKEND_OWNER` (required) - the email address of the project owner (will be used for tagging the resources). If not provided the script will try to retrieve it from 1Password ([.monospaced]#op://Development/AWS [PROJECT NAME] Terraform/owner#).
 
-`STATE_AZURE_PRINCIPAL` (required) - the Principal ID (created earlier) that will be used for Terraform to deploy resources. If not provided the script will try to retrieve it from 1Password ([.monospaced]#op://Development/Azure [PROJECT NAME] Terraform/id#).
+`WORKSPACE_AZURE_PRINCIPAL` (required) - the Principal ID (created earlier) that will be used for Terraform to deploy resources. If not provided the script will try to retrieve it from 1Password ([.monospaced]#op://Development/Azure [PROJECT NAME] Terraform/id#).
 
 `AZURE_LOCATION` (optional) - the Azure region for deployment of the Terraform S3 backend (default is swedencentral).
 
