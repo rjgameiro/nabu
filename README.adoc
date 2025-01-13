@@ -1,4 +1,17 @@
 = nabu
 
 nabu might become a multiplayer engine for trick taking card games.
-For now... not much more than an IaC template to deploy a web server, a couple of Rust APIs, a couple of Rust Workers, to one or more VMs that can be hosted on: AWS, Azure, Digital Ocean and QEMU (locally).
+
+For now…​ not much more than an IaC template to deploy:
+
+- A web server
+- Containerized Redis and PostgreSQL
+- A couple of Rust APIs
+- A couple of Rust Background Workers
+
+…​to one or more VMs that can be hosted on:
+
+- AWS
+- Azure
+- Digital Ocean
+- QEMU (locally for development/testing).
