@@ -15,3 +15,5 @@ For now…​ not much more than an IaC template to deploy:
 - Azure
 - Digital Ocean
 - QEMU (locally for development/testing).
+
+...using terraform or opentofu and ansible for infrastructure setup, and ansible for application deployment (just because it can be initiated and used locally).
