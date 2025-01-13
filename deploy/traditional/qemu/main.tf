@@ -55,7 +55,7 @@ resource "shell_script" "vm" {
   }
 
   environment = {
-    name         = "f${count.index}.${terraform.workspace}.${var.project}"
+    name         = format("f${count.index}.%s.qemu.%s", terraform.workspace, var.project)
     ncpus        = 2
     memory       = 2048
     uefi_device  = shell_script.uefi_ram_disk[count.index].output["device"]
@@ -78,7 +78,7 @@ resource "shell_script" "vm_name_to_local_ip" {
   }
 
   environment = {
-    entry       = format("f${count.index}.%s.qemu.%s", terraform.workspace, var.project)
+    entry       = shell_script.vm[count.index].output.name
     prefix      = "127.0.0.1"
     file        = "/etc/hosts"
     become_root = "yes"
@@ -97,7 +97,7 @@ resource "shell_script" "ssh_config_entry" {
   }
 
   environment = {
-    ssh_fqdn = format("f${count.index}.%s.qemu.%s", terraform.workspace, var.project)
+    ssh_fqdn = shell_script.vm[count.index].output.name
     ssh_port = 2022 + count.index
   }
 

@@ -32,3 +32,7 @@ app_site_cert: 'cert'
 app_site_conf: 'conf'
 app_site_include: '{{ app_site_conf }}/include'
 app_site_public: 'public'
+
+app_packages:
+  - 'postgresql-common'
+
