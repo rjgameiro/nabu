@@ -12,6 +12,7 @@
       ansible.builtin.command: '/usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y'
       when: apt_installed.changed
 
+
     - name: 'ensure "{{ app_group }}" group exists'
       ansible.builtin.group:
         name: '{{ app_group }}'
